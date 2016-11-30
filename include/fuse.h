@@ -99,6 +99,9 @@ typedef int (*fuse_fill_dir_t) (void *buf, const char *name,
  * See http://fuse.sourceforge.net/wiki/ for more information.  There
  * is also a snapshot of the relevant wiki pages in the doc/ folder.
  */
+/**
+ * fuse 操作函数
+ */
 struct fuse_operations {
 	/**
 	 * Flag indicating that the path need not be calculated for
@@ -124,6 +127,10 @@ struct fuse_operations {
 	 * ignored.	 The 'st_ino' field is ignored except if the 'use_ino'
 	 * mount option is given.
 	 */
+	/**
+	 * 这个函数与 stat() 类似。st_dev 和 st_blksize 域都可以忽略。st_ino 域也会被忽略，除非在执行 mount 时
+	 * 指定了 use_ino 选项
+	 */
 	int (*getattr) (const char *, struct stat *);
 
 	/** Read the target of a symbolic link
@@ -134,6 +141,10 @@ struct fuse_operations {
 	 * buffer, it should be truncated.	The return value should be 0
 	 * for success.
 	 */
+	/**
+	 * 这个函数会读取一个符号链接的目标。缓冲区应该是一个以 null 结束的字符串。缓冲区的大小参数包括这个 null 
+	 * 结束字符的空间。如果链接名太长，不能保存到缓冲区中，就应该被截断。成功时的返回值应该是 “0”。
+	 */
 	int (*readlink) (const char *, char *, size_t);
 
 	/** Create a file node
@@ -141,6 +152,9 @@ struct fuse_operations {
 	 * This is called for creation of all non-directory, non-symlink
 	 * nodes.  If the filesystem defines a create() method, then for
 	 * regular files that will be called instead.
+	 */
+	/**
+	 * 这个函数会创建一个文件节点。此处没有 create() 操作；mknod() 会在创建非目录、非符号链接的节点时调用。
 	 */
 	int (*mknod) (const char *, mode_t, dev_t);
 
@@ -159,21 +173,29 @@ struct fuse_operations {
 	int (*rmdir) (const char *);
 
 	/** Create a symbolic link */
+	/**
+	 * 这个函数用来创建一个符号链接
+	 * int symlink(const char *target, const char *linkpath) 
+	 */
 	int (*symlink) (const char *, const char *);
 
 	/** Rename a file */
 	int (*rename) (const char *, const char *, unsigned int);
 
 	/** Create a hard link to a file */
+	/* 这个函数创建一个到文件的硬链接 */
 	int (*link) (const char *, const char *);
 
 	/** Change the permission bits of a file */
+	/* 修改文件的权限位 */
 	int (*chmod) (const char *, mode_t);
 
 	/** Change the owner and group of a file */
-	int (*chown) (const char *, uid_t, gid_t);
+    /* 修改文件的属主 */
+    int (*chown) (const char *, uid_t, gid_t);
 
 	/** Change the size of a file */
+    /* 修改文件的属主的大小 */
 	int (*truncate) (const char *, off_t);
 
 	/** File open operation
@@ -193,6 +215,10 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/**
+	 * 这是文件的打开操作。对 open() 函数不能传递创建或截断标记（O_CREAT、O_EXCL、O_TRUNC）。这个函数应该检查是否允许执
+	 * 行给定的标记的操作。另外，open() 也可能在 fuse_file_info 结构中返回任意的文件句柄，这会传递给所有的文件操作。
+	 */
 	int (*open) (const char *, struct fuse_file_info *);
 
 	/** Read data from an open file
@@ -206,6 +232,11 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/**
+	 * 这个函数从一个打开文件中读取数据。除非碰到 EOF 或出现错误，否则 read() 应该返回所请求的字节数的数据；否则，
+	 * 其余数据都会被替换成 0。一个例外是在执行 mount 命令时指定了 direct_io 选项，在这种情况中 read() 系统调用的返
+	 * 回值会影响这个操作的返回值。
+	 */
 	int (*read) (const char *, char *, size_t, off_t,
 		     struct fuse_file_info *);
 
@@ -217,6 +248,10 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/**
+	 * 这个函数将数据写入一个打开的文件中。除非碰到 EOF 或出现错误，否则 write() 应该返回所请求的字节数的数据。
+	 * 一个例外是在执行 mount 命令时指定了 direct_io 选项（这于 read() 操作的情况类似）。
+	 */
 	int (*write) (const char *, const char *, size_t, off_t,
 		      struct fuse_file_info *);
 
@@ -227,6 +262,7 @@ struct fuse_operations {
 	 * Replaced 'struct statfs' parameter with 'struct statvfs' in
 	 * version 2.5
 	 */
+	/* 这个函数获取文件系统的统计信息。f_type 和 f_fsid 域都会被忽略。*/
 	int (*statfs) (const char *, struct statvfs *);
 
 	/** Possibly flush cached data
@@ -252,6 +288,15 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/**
+	 * 这表示要刷新缓存数据。它并不等于 fsync() 函数 —— 也不是请求同步脏数据。每次对一个文件描述符执
+	 * 行 close() 函数时，都会调用 flush()；因此如果文件系统希望在 close() 中返回写错误，并且这个文件已经缓存了
+	 * 脏数据，那么此处就是回写数据并返回错误的好地方。由于很多应用程序都会忽略 close() 错误，因此这通常用处不大。
+	 *
+	 * 注意：我们也可以对一个 open() 多次调用 flush() 方法。如果由于调用了 dup()、dup2() 或 fork() 而产生多个文
+	 * 件描述符指向一个打开文件的情况，就可能会需要这种用法。我们无法确定哪个 flush 操作是最后一次操作，因此每个 flush
+	 * 都应该同等地对待。多个写刷新序列相当罕见，因此这并不是什么问题。
+	 */
 	int (*flush) (const char *, struct fuse_file_info *);
 
 	/** Release an open file
@@ -268,6 +313,12 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/**
+	 * 这个函数释放一个打开文件。release() 是在对一个打开文件没有其他引用时调用的 —— 此时所有的文件描述符
+	 * 都会被关闭，所有的内存映射都会被取消。对于每个 open() 调用来说，都必须有一个使用完全相同标记和文件描
+	 * 述符的 release() 调用。对一个文件打开多次是可能的，在这种情况中只会考虑最后一次 release，然后就不能再
+	 * 对这个文件执行更多的读/写操作了。release 的返回值会被忽略。
+	 */
 	int (*release) (const char *, struct fuse_file_info *);
 
 	/** Synchronize file contents
@@ -277,6 +328,7 @@ struct fuse_operations {
 	 *
 	 * Changed in version 2.2
 	 */
+	/* 这个函数用来同步文件内容。如果 datasync 参数为非 0，那么就只会刷新用户数据，而不会刷新元数据*/
 	int (*fsync) (const char *, int, struct fuse_file_info *);
 
 	/** Set extended attributes */
@@ -461,6 +513,7 @@ struct fuse_operations {
 	 *
 	 * Introduced in version 2.6
 	 */
+	/* 修改文件的属主的访问时间  之前版本是utime() */
 	int (*utimens) (const char *, const struct timespec tv[2]);
 
 	/**

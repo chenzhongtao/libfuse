@@ -669,21 +669,34 @@ struct fuse_fallocate_in {
 	uint32_t	mode;
 	uint32_t	padding;
 };
-
+ 
+/* 请求包 */
 struct fuse_in_header {
+	/* 本次请求数据包的长度 */
 	uint32_t	len;
+	/* 操作码 */
 	uint32_t	opcode;
+	/* 请求的uid,回复包需要 */
 	uint64_t	unique;
+	/* 本次操作涉及的文件系统 node id */
 	uint64_t	nodeid;
+	/* 调用者的id */
 	uint32_t	uid;
+	/* 调用者所在组id */
 	uint32_t	gid;
 	uint32_t	pid;
+	/* padding 对齐使用 填充至8字节倍数 */
 	uint32_t	padding;
 };
 
+
+/* 回复包 */
 struct fuse_out_header {
+    /* 本次回复包的长度 */
 	uint32_t	len;
+	/* 错误码 */
 	int32_t		error;
+	/* 请求的uid */
 	uint64_t	unique;
 };
 

@@ -6,6 +6,9 @@
   See the file COPYING.LIB.
 */
 
+/* fuse 命令行参数和fuse_main */
+
+
 #include "config.h"
 #include "fuse_i.h"
 #include "fuse_misc.h"
@@ -139,6 +142,9 @@ static int add_default_subtype(const char *progname, struct fuse_args *args)
 	return res;
 }
 
+/**
+ * fuse 命令行参数解析
+ */
 int fuse_parse_cmdline(struct fuse_args *args, char **mountpoint,
 		       int *multithreaded, int *foreground)
 {
@@ -315,6 +321,9 @@ static void fuse_teardown(struct fuse *fuse, char *mountpoint)
 	free(mountpoint);
 }
 
+/**
+ * fuse 主函数
+ */
 int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
 		   size_t op_size, void *user_data)
 {

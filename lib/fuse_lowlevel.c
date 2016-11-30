@@ -6,6 +6,9 @@
   See the file COPYING.LIB
 */
 
+/* 实现比较底层的函数封装，供fuse.c等使用 */
+
+
 #define _GNU_SOURCE
 
 #include "config.h"
